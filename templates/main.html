@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Resume Ranking Tool</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f7fa;
+        }
+        h1 {
+            color: #2c3e50;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .container {
+            background: white;
+            border-radius: 8px;
+            padding: 30px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        .form-group {
+            margin-bottom: 20px;
+        }
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+        }
+        input[type="file"] {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            background: #f9f9f9;
+        }
+        button {
+            background-color: #3498db;
+            color: white;
+            border: none;
+            padding: 12px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            width: 100%;
+            transition: background-color 0.3s;
+        }
+        button:hover {
+            background-color: #2980b9;
+        }
+        #results {
+            margin-top: 30px;
+            display: none;
+        }
+        .result-item {
+            background: #f1f8ff;
+            padding: 15px;
+            margin-bottom: 10px;
+            border-radius: 4px;
+            border-left: 4px solid #3498db;
+        }
+        .result-item h3 {
+            margin-top: 0;
+            color: #2c3e50;
+        }
+        .score {
+            font-weight: bold;
+            color: #2980b9;
+        }
+        .loading {
+            text-align: center;
+            display: none;
+            margin: 20px 0;
+        }
+        .spinner {
+            border: 4px solid rgba(0, 0, 0, 0.1);
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            border-left-color: #3498db;
+            animation: spin 1s linear infinite;
+            margin: 0 auto;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>AI Resume Ranking Tool</h1>
+        
+        <form id="uploadForm">
+            <div class="form-group">
+                <label for="jobDescription">Job Description:</label>
+                <input type="file" id="jobDescription" name="job_description" accept=".txt,.pdf,.docx" required>
+            </div>
+            
+            <div class="form-group">
+                <label for="resumes">Upload Resumes (multiple files allowed):</label>
+                <input type="file" id="resumes" name="resumes" multiple accept=".txt,.pdf,.docx" required>
+            </div>
+            
+            <button type="submit">Rank Candidates</button>
+        </form>
+        
+        <div class="loading" id="loading">
+            <div class="spinner"></div>
+            <p>Processing resumes...</p>
+        </div>
+        
+        <div id="results">
+            <h2>Ranking Results</h2>
+            <div id="resultsList"></div>
+        </div>
+    </div>
+
+    <script>
+        document.getElementById('uploadForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const formData = new FormData();
+            const jobDescription = document.getElementById('jobDescription').files[0];
+            const resumes = document.getElementById('resumes').files;
+            
+            if (!jobDescription || resumes.length === 0) {
+                alert('Please upload both job description and at least one resume');
+                return;
+            }
+            
+            formData.append('job_description', jobDescription);
+            
+            for (let i = 0; i < resumes.length; i++) {
+                formData.append('resumes', resumes[i]);
+            }
+            
+            // Show loading spinner
+            document.getElementById('loading').style.display = 'block';
+            document.getElementById('results').style.display = 'none';
+            
+            fetch('/upload', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Server error: ' + response.status);
+                }
+                return response.json();
+            })
+            .then(data => {
+                // Hide loading spinner
+                document.getElementById('loading').style.display = 'none';
+                
+                // Display results
+                const resultsList = document.getElementById('resultsList');
+                resultsList.innerHTML = '';
+                
+                if (data.rankings && data.rankings.length > 0) {
+                    data.rankings.forEach((candidate, index) => {
+                        const resultItem = document.createElement('div');
+                        resultItem.className = 'result-item';
+                        
+                        resultItem.innerHTML = `
+                            <h3>${index + 1}. ${candidate.name}</h3>
+                            <p><strong>File:</strong> ${candidate.file}</p>
+                            <p><strong>Match Score:</strong> <span class="score">${(candidate.score * 100).toFixed(2)}%</span></p>
+                        `;
+                        
+                        resultsList.appendChild(resultItem);
+                    });
+                    
+                    document.getElementById('results').style.display = 'block';
+                } else {
+                    resultsList.innerHTML = '<p>No results found or error in processing.</p>';
+                    document.getElementById('results').style.display = 'block';
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                document.getElementById('loading').style.display = 'none';
+                alert('Error processing request: ' + error.message);
+            });
+        });
+    </script>
+</body>
+</html>
+

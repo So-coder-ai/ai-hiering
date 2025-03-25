@@ -1,0 +1,4 @@
+Name: Sarthak bajpai
+Skills: Python
+Experience: 1 years in AI development at Google
+Education: B.Tech in Computer Science
